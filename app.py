@@ -1,15 +1,23 @@
 from flask import Flask, request, jsonify
-from db_helpers import run_query
+from db_helpers import *
 import sys
 
 app = Flask(__name__)
 
-@app.get('/api/animals')
+@app.get('/api/animalsdb')
 def animals_get():
     # TODO: db SELECT
-    animal_list = []
-    return jsonify(animal_list), 200
-@app.post('/api/animals')
+    animal_list = db_helpers.run_query("SELECT * FROM animal")
+    resp = []
+    for animal in animal_list:
+        an_obj = {}
+        an_obj['animalId'] = animal[0]
+        an_obj['animalName'] = animal[1]
+        an_obj['imageURL'] = animal[2]
+        resp.append(an_obj)
+    return jsonify(resp), 200
+
+@app.post('/api/animalsdb')
 def animals_post():
     data = request.json
     animal_name = data.get('animalName')
@@ -19,9 +27,8 @@ def animals_post():
     if not image_url:
         return jsonify("Missing required argument 'imageURL'"), 422
     # TODO: Error checking the actual values for the arguments
-    # TODO: DB write
-    
-
+    db_helpers.run_query("INSERT INTO animal (name, image_url) VALUES (?,?)", [animal_name, image_url])
+    return jsonify("Animal added"), 201
 
 
 
@@ -38,7 +45,7 @@ if mode == "testing":
     app.run(debug=True)
 elif mode == "production":
     import bjoern
-    bjoern.run(app, "0.0.0", 5000)
+    bjoern.run(app, "0.0.0.0", 5005) # Other apps might be using 5000 or 5001 at the moment, so to be safe I'll go 5005
     print('Running in development mode!')
 else:
     print("Invalid mode.  Must be testing or production")
